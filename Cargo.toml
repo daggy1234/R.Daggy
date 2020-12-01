@@ -29,11 +29,14 @@ features = ["std"]
 image = "rust"
 
 [package.metadata.wharf.output]
-image = "scratch"
-workdir = "/"
-entrypoint = ["/bin/binary"]
+image = "gcr.io/distroless/cc-debian10"
+entrypoint = ["bot"]
 stop-signal = "SIGINT"
+
+[package.metadata.wharf.output.labels]
+"simple-label" = "simple value"
+"my.awesome.label" = "another value"
 
 [[package.metadata.wharf.binary]]
 name = "rdaggy"
-destination = "/bin/binary"
+destination = "/usr/local/bin/bot"
