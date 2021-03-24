@@ -1,10 +1,9 @@
 mod commands;
 mod misc;
+use std::time::Instant;
 mod utils;
 
-use utils::uptimer::{Uptimer, UptimerKey};
-
-use serenity::utils::MessageBuilder;
+use dagpirs;
 use serenity::{
     async_trait,
     client::bridge::gateway::GatewayIntents,
@@ -20,19 +19,26 @@ use serenity::{
     model::{
         channel::Message, channel::Reaction, channel::ReactionType, event::ResumedEvent,
         gateway::Ready, guild::Member, id::ChannelId, id::GuildId, id::UserId,
+        interactions::Interaction, interactions::InteractionResponseType, prelude::User,
     },
     prelude::*,
+    utils::Colour,
 };
+use serenity::{model::event::Event, utils::MessageBuilder};
 use std::{
     collections::{HashMap, HashSet},
     env,
     sync::Arc,
 };
+use utils::{
+    client,
+    uptimer::{Uptimer, UptimerKey},
+};
 
 use tracing::{error, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
-use commands::{dagpi::*, info::*, math::*, meta::*, moderation::*, owner::*};
+use commands::{dagpi::*, info::*, math::*, meta::*, moderation::*, owner::*, translation::*};
 
 pub struct ShardManagerContainer;
 
@@ -41,6 +47,20 @@ impl TypeMapKey for ShardManagerContainer {
 }
 
 struct Handler;
+struct RawHandler;
+
+#[async_trait]
+impl RawEventHandler for RawHandler {
+    async fn raw_event(&self, ctx: Context, ev: Event) {
+        let mut data = ctx.data.write().await;
+        let counter = data
+            .get_mut::<EventCounter>()
+            .expect("Expected CommandCounter in TypeMap.");
+        let et = format!("{:?}", ev.event_type());
+        let entry = counter.entry(et).or_insert(0);
+        *entry += 1;
+    }
+}
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -54,6 +74,31 @@ impl EventHandler for Handler {
         info!("Resumed");
     }
 
+    async fn guild_member_removal(
+        &self,
+        ctx: Context,
+        _guild_id: GuildId,
+        user: User,
+        _member_data_if_available: Option<Member>,
+    ) {
+        let o = user.direct_message(&ctx.http, |f| {
+            f.embed(|e| {
+                e.title("Sorry you had to leave");
+                e.description(format!(
+                    "Permarent Server Invite: [Invite](https://server.daggy.tech)\nServer Owner: `Daggy#1234`"
+                ));
+                e.color(Colour::RED);
+                e
+            })
+        })
+        .await;
+
+        match o {
+            Ok(_m) => {}
+            Err(_e) => {}
+        };
+    }
+
     async fn guild_member_addition(&self, ctx: Context, guild: GuildId, mut mem: Member) {
         let cached_guild = guild.to_guild_cached(&ctx.cache).await.unwrap();
         let gid: u64 = 491175207122370581;
@@ -63,9 +108,21 @@ impl EventHandler for Handler {
                 .await
                 .unwrap();
             let role = cached_guild.role_by_name("Unverified").unwrap();
-            mem.add_role(&ctx, role).await.unwrap();
+            mem.add_role(&ctx.http, role).await.unwrap();
             let msg = MessageBuilder::new().push("Welcome").mention(&mem.user).push_bold("to Daggy Tech").push("A Server that houses projects like Dagpi,Dagbot,R.Daggy, Polraorid and More!\nTo Verify Head on over to").channel(channel).push("And read the rules to verify!\nHave a Great Time!").build();
-            channel.say(ctx, msg).await.unwrap();
+            channel.say(&ctx.http, msg).await.unwrap();
+
+            mem.user
+                .direct_message(&ctx.http, |f| {
+                    f.embed(|e| {
+                        e.title("Welcome to Daggy Tech!");
+                        e.description("Please be sure to read the rules in the rules channel and verify by sending `daggy verify`.\nDo remember to keep topics in their relevant channels.\nHave a safe and fun time.\nPing the mods to report a problem.");
+                        e.color(Colour::DARK_GREEN);
+                        e
+                    })
+                })
+                .await
+                .expect("No Dm");
         }
     }
 
@@ -90,6 +147,7 @@ impl EventHandler for Handler {
                     "\u{01f44c}" => ("Dagpi Notifs", 783332593318756392),
                     "\u{01f4f7}" => ("Polaroid Updates", 783332998375669799),
                     "\u{01f916}" => ("R.Daggy", 217462890364403712),
+                    "\u{01f58c}" => ("DagCord", 823515452893823027),
                     _ => ("None", 217462890364403712),
                 },
                 _ => ("None", 217462890364403712),
@@ -141,6 +199,7 @@ impl EventHandler for Handler {
                     "\u{01f44c}" => ("Dagpi Notifs", 783332593318756392),
                     "\u{01f4f7}" => ("Polaroid Updates", 783332998375669799),
                     "\u{01f916}" => ("R.Daggy", 217462890364403712),
+                    "\u{01f58c}" => ("DagCord", 823515452893823027),
                     _ => ("None", 217462890364403712),
                 },
                 _ => ("None", 217462890364403712),
@@ -172,22 +231,95 @@ impl EventHandler for Handler {
             }
         };
     }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let data = match &interaction.data {
+            Some(e) => e,
+            None => panic!("Fuck"),
+        };
+        if data.name == "echo".to_string() {
+            interaction
+                .create_interaction_response(&ctx.http, |f| {
+                    f.kind(InteractionResponseType::ChannelMessage);
+                    f.interaction_response_data(|f| {
+                        f.content(format!(
+                            "```bash\necho {}\n```",
+                            data.options[0].value.as_ref().expect("grr")
+                        ))
+                    });
+                    f
+                })
+                .await
+                .unwrap();
+        } else {
+            if data.name == "dagpi".to_string() {
+                if data.options[0].name == "status".to_string() {
+                    interaction
+                        .create_interaction_response(&ctx.http, |f| {
+                            f.kind(InteractionResponseType::ChannelMessage);
+                            f.interaction_response_data(|f| f.content("Pinging...."));
+                            f
+                        })
+                        .await
+                        .unwrap();
+                    let data = ctx.data.read().await;
+                    let cliet = data.get::<client::ClientKey>().expect("No Client");
+                    let now = Instant::now();
+                    let resp = cliet.get("https://api.dagpi.xyz", "Nope").await;
+                    let new_now = Instant::now();
+                    let diff = new_now.duration_since(now);
+                    let o = match resp {
+                        Ok(_r) => {
+                            format!("API is online. Took `{:?}` to ping", diff)
+                        }
+                        Err(s) => {
+                            format!(
+                                "API is online.\nReturned Status Code `{}`\nTook `{:?}`s",
+                                s, diff
+                            )
+                        }
+                    };
+                    interaction
+                        .edit_original_interaction_response(
+                            &ctx.http,
+                            675937742638809089_u64,
+                            |f| f.content(o),
+                        )
+                        .await
+                        .unwrap();
+                } else {
+                    if data.options[0].name == "info".to_string() {
+                        interaction
+                    .create_interaction_response(&ctx.http, |f| {
+                        f.kind(InteractionResponseType::ChannelMessage);
+                        f.interaction_response_data(|f| {
+                            f.content("```yaml\nDagpi Url: https://dagpi.xyz\nApi Url: https://api.dagpi.xyz\nDocs: https://dagpi.docs.apiary.io\nEmail: contact@dagpi.xyz\n```")
+                        });
+                        f
+                    })
+                    .await
+                    .unwrap();
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[group]
 #[description("Get info about R.Daggy")]
-#[commands(uptime, ping, quit, latency, source, about)]
+#[commands(uptime, ping, quit, latency, source, about, socket)]
 struct General;
 
 #[group]
 #[description("Commands used for dagpi")]
 #[prefix = "dagpi"]
-#[commands(status, approve)]
+#[commands(status, approve, reject)]
 struct Dagpi;
 
 #[group]
 #[description("Fun stuff for this boring bot")]
-#[commands(multiply, pride, joke)]
+#[commands(multiply, pride, joke, roast, headline)]
 struct Fun;
 
 #[group]
@@ -200,10 +332,21 @@ struct Moderation;
 #[commands(serverinfo, userinfo, commands, spotify, ide)]
 struct Info;
 
+#[group]
+#[description("Text encoding and decoding")]
+#[commands(encode, uwu)]
+struct Text;
+
 pub struct CommandCounter;
 
 impl TypeMapKey for CommandCounter {
     type Value = HashMap<String, u64>;
+}
+
+pub struct EventCounter;
+
+impl TypeMapKey for EventCounter {
+    type Value = HashMap<String, usize>;
 }
 
 #[help]
@@ -347,8 +490,8 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
 async fn main() {
     // This will load the environment variables located at `./.env`, relative to
     // the CWD. See `./.env.example` for an example on how to structure this.
-    
-    //dotenv::dotenv().expect("Failed to load .env file");
+
+    // dotenv::dotenv().expect("Failed to load .env file");
 
     // Initialize the logger to use environment variables.
     //
@@ -378,7 +521,7 @@ async fn main() {
     let id = Some(UserId::from(user));
     // Create the framework
     let framework = StandardFramework::new()
-        .configure(|c| c.owners(owners).on_mention(id).prefix("daggy "))
+        .configure(|c| c.owners(owners).on_mention(id).prefix("dev "))
         .before(before)
         .bucket("complicated", |b| b.delay(5).time_span(30).limit(2))
         .await
@@ -394,21 +537,27 @@ async fn main() {
         .group(&MODERATION_GROUP)
         .group(&FUN_GROUP)
         .group(&INFO_GROUP)
+        .group(&TEXT_GROUP)
         .group(&DAGPI_GROUP);
 
     let mut client = Client::builder(&token)
         .framework(framework)
         .event_handler(Handler)
+        .raw_event_handler(RawHandler)
         .intents(GatewayIntents::all())
         .await
         .expect("Err creating client");
 
+    let dc = dagpirs::Client::new(&std::env::var("DAGPI_TOKEN").expect("No token")).unwrap();
+
     {
         let mut data = client.data.write().await;
         data.insert::<CommandCounter>(HashMap::default());
+        data.insert::<EventCounter>(HashMap::new());
         data.insert::<UptimerKey>(Uptimer::new());
         data.insert::<utils::client::ClientKey>(utils::client::Client::new());
         data.insert::<ShardManagerContainer>(client.shard_manager.clone());
+        data.insert::<dagpirs::Client>(Arc::new(dc))
     }
 
     let shard_manager = client.shard_manager.clone();

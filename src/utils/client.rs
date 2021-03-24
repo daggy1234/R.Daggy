@@ -47,4 +47,19 @@ impl Client {
             _ => Err(stat),
         }
     }
+
+    pub async fn delete(&self, url: &str, auth: &str) -> Result<reqwest::Response, u16> {
+        let res = self
+            .req
+            .delete(url)
+            .header("Authorization", auth)
+            .send()
+            .await
+            .unwrap();
+        let stat = res.status().as_u16();
+        match res.status() {
+            StatusCode::OK => Ok(res),
+            _ => Err(stat),
+        }
+    }
 }

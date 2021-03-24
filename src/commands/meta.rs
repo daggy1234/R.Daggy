@@ -1,12 +1,14 @@
-use crate::utils::uptimer;
 use crate::CommandCounter;
 use crate::ShardManagerContainer;
-use serenity::builder::{CreateEmbed, CreateEmbedAuthor};
+use crate::{utils::uptimer, EventCounter};
+use prettytable::{Cell, Row, Slice, Table};
+use serenity::builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage};
 use serenity::client::bridge::gateway::ShardId;
 use serenity::framework::standard::{macros::command, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use serenity::utils::Colour;
+use serenity_utils::menu::{Menu, MenuOptions};
 use std::fmt::Write;
 
 #[command]
@@ -93,6 +95,63 @@ async fn commands(ctx: &Context, msg: &Message) -> CommandResult {
 
     msg.channel_id.say(&ctx.http, &contents).await?;
 
+    Ok(())
+}
+
+#[command]
+#[bucket = "complicated"]
+async fn socket(ctx: &Context, msg: &Message) -> CommandResult {
+    let data = ctx.data.read().await;
+    let counter = data
+        .get::<EventCounter>()
+        .expect("Expected EVentCounter in TypeMap.");
+    let mut table = Table::new();
+    let mut vc = Vec::new();
+    table.set_titles(Row::new(vec![Cell::new("Event"), Cell::new("Occurences")]));
+    for (k, v) in counter {
+        table.add_row(Row::new(vec![Cell::new(k), Cell::new(&v.to_string())]));
+    }
+
+    let rows = table.len();
+
+    if rows < 10 {
+        msg.channel_id
+            .send_message(&ctx.http, |f| {
+                f.embed(|em| {
+                    em.title("Socket Stats");
+                    let st = table.to_string();
+                    em.description(format!("```\n{}\n```", st));
+                    em
+                })
+            })
+            .await
+            .unwrap();
+    } else {
+        for i in (10..rows + 10).step_by(10) {
+            let mut v = CreateMessage::default();
+
+            if i - 10 > rows {
+                v.embed(|em| {
+                    em.title("Socket Stats");
+                    let st = table.slice(i - 10..rows).to_string();
+                    em.description(format!("```\n{}\n```", st));
+                    em
+                });
+                break;
+            } else {
+                v.embed(|em| {
+                    em.title("Socket Stats");
+                    let st = table.slice(i - 10..i).to_string();
+                    em.description(format!("```\n{}\n```", st));
+                    em
+                });
+                vc.push(v);
+            }
+        }
+
+        let m = Menu::new(&ctx, msg, &vc, MenuOptions::default());
+        m.run().await?;
+    }
     Ok(())
 }
 

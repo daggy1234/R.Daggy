@@ -5,7 +5,7 @@ use serenity::prelude::*;
 use serenity::utils::{Color, MessageBuilder};
 use std::char;
 use std::time::Duration;
-use tokio::time;
+use tokio::time::sleep;
 #[command]
 #[required_permissions("KICK_MEMBERS")]
 #[num_args(2)]
@@ -168,7 +168,7 @@ async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                             us.add_role(&ctx, rid).await.unwrap();
                             msg.channel_id.say(&ctx, "Muted the User").await.unwrap();
                             let time = args.single::<u64>().unwrap();
-                            time::delay_for(Duration::from_secs(time)).await;
+                            sleep(Duration::from_secs(time)).await;
                             us.remove_role(&ctx, rid).await.unwrap();
                         }
                     }
