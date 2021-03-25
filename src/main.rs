@@ -282,7 +282,7 @@ impl EventHandler for Handler {
                     interaction
                         .edit_original_interaction_response(
                             &ctx.http,
-                            675937742638809089_u64,
+                            696397280433012776_u64,
                             |f| f.content(o),
                         )
                         .await
@@ -334,7 +334,7 @@ struct Info;
 
 #[group]
 #[description("Text encoding and decoding")]
-#[commands(encode, uwu)]
+#[commands(bottom, uwu)]
 struct Text;
 
 pub struct CommandCounter;
@@ -517,7 +517,7 @@ async fn main() {
         }
         Err(why) => panic!("Could not access application info: {:?}", why),
     };
-    let user: u64 = 491174779278065689;
+    let user: u64 = 696397280433012776;
     let id = Some(UserId::from(user));
     // Create the framework
     let framework = StandardFramework::new()

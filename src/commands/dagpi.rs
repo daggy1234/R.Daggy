@@ -314,15 +314,14 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 #[required_permissions("ADMINISTRATOR")]
 async fn reject(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.read().await;
-    let mut success = false;
     let typing = msg.channel_id.start_typing(&ctx.http).unwrap();
-    let member = args.single::<id::UserId>().unwrap();
+    let member = args.single::<String>().unwrap();
     let cliet = data.get::<client::ClientKey>().expect("No Client");
     let now = Instant::now();
     let tok = std::env::var("DAGPI_ADMIN").expect("No token");
     let resp = cliet
         .delete(
-            &format!("https://central.dagpi.xyz/deleteapp/{}/", member.as_u64()),
+            &format!("https://central.dagpi.xyz/deleteapp/{}/", member),
             &tok,
         )
         .await;
@@ -330,7 +329,6 @@ async fn reject(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let diff = new_now.duration_since(now);
     match resp {
         Ok(_r) => {
-            success = true;
             &msg.channel_id
                 .say(&ctx, format!("App was succesful deleted.\nTook {:?}", diff))
                 .await
@@ -347,29 +345,5 @@ async fn reject(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         }
     };
     typing.stop();
-    let cached_guild = msg
-        .guild_id
-        .unwrap()
-        .to_guild_cached(&ctx.cache)
-        .await
-        .unwrap();
-    if success {
-        let u = args.single::<id::UserId>().unwrap();
-        if let Some(member) = cached_guild.members.get(&u) {
-            match member
-                .user
-                .direct_message(&ctx, |f| f.content("Your dagpi app was rejected."))
-                .await
-            {
-                Ok(_v) => (msg.channel_id.say(&ctx, "Dm'ed a user").await.unwrap()),
-                Err(_e) => msg
-                    .channel_id
-                    .say(&ctx, "Couldn't Dm User. Please Contact Manually")
-                    .await
-                    .unwrap(),
-            };
-        };
-    }
-
     Ok(())
 }
