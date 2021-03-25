@@ -521,7 +521,7 @@ async fn main() {
     let id = Some(UserId::from(user));
     // Create the framework
     let framework = StandardFramework::new()
-        .configure(|c| c.owners(owners).on_mention(id).prefix("dev "))
+        .configure(|c| c.owners(owners).on_mention(id).prefix("daggy "))
         .before(before)
         .bucket("complicated", |b| b.delay(5).time_span(30).limit(2))
         .await
