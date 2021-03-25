@@ -4,6 +4,7 @@ use std::time::Instant;
 mod utils;
 
 use dagpirs;
+use sentry;
 use serenity::{
     async_trait,
     client::bridge::gateway::GatewayIntents,
@@ -107,9 +108,13 @@ impl EventHandler for Handler {
                 .channel_id_from_name(&ctx.cache, "welcomes")
                 .await
                 .unwrap();
+            let ch = cached_guild
+                .channel_id_from_name(&ctx.cache, "rules")
+                .await
+                .unwrap();
             let role = cached_guild.role_by_name("Unverified").unwrap();
             mem.add_role(&ctx.http, role).await.unwrap();
-            let msg = MessageBuilder::new().push("Welcome").mention(&mem.user).push_bold("to Daggy Tech").push("A Server that houses projects like Dagpi,Dagbot,R.Daggy, Polraorid and More!\nTo Verify Head on over to").channel(channel).push("And read the rules to verify!\nHave a Great Time!").build();
+            let msg = MessageBuilder::new().push("Welcome").mention(&mem.user).push_bold("to Daggy Tech").push("A Server that houses projects like Dagpi,Dagbot,R.Daggy, Polraorid and More!\nTo Verify Head on over to").channel(ch).push("And read the rules to verify!\nHave a Great Time!").build();
             channel.say(&ctx.http, msg).await.unwrap();
 
             mem.user
@@ -478,6 +483,10 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
                 .unwrap();
         }
         _ => {
+            sentry::capture_message(
+                &format!("Unhandled Error: {:?}", error),
+                sentry::Level::Warning,
+            );
             msg.channel_id
                 .say(&ctx, "Unkown Error Occured")
                 .await
@@ -500,6 +509,8 @@ async fn main() {
     let subscriber = FmtSubscriber::builder()
         .with_env_filter(EnvFilter::from_default_env())
         .finish();
+    let _guard = sentry::init(env::var("SENTRY").expect("Expected a token in the environment"));
+    sentry::capture_message("Bot online", sentry::Level::Info);
 
     tracing::subscriber::set_global_default(subscriber).expect("Failed to start the logger");
 

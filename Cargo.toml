@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 serenity = { version="0.10.4", features = ["client", "gateway", "cache", "rustls_backend", "model","framework", "standard_framework", "unstable_discord_api"] }
-serenity_utils = {  features = ["cache", "native_tls_backend"], version = "0.6.1" }
+serenity_utils = {  features = ["cache", "rustls_backend"], version = "0.6.1" }
 tokio = { version = "1.4.0", features = ["macros","signal", "fs", "rt-multi-thread", "time"] }
 dotenv = "0.15"
 prettytable-rs = "0.8.0"
@@ -34,18 +34,7 @@ version = "0.1.3"
 default-features = true
 features = ["serenity"]
 
-[package.metadata.wharf.builder]
-image = "rust"
-
-[package.metadata.wharf.output]
-image = "gcr.io/distroless/cc-debian10"
-entrypoint = ["bot"]
-stop-signal = "SIGINT"
-
-[package.metadata.wharf.output.labels]
-"simple-label" = "simple value"
-"my.awesome.label" = "another value"
-
-[[package.metadata.wharf.binary]]
-name = "rdaggy"
-destination = "/usr/local/bin/bot"
+[dependencies.sentry]
+version = "0.22.0"
+default-features = false
+features = ["backtrace", "contexts", "panic", "reqwest", "rustls"]

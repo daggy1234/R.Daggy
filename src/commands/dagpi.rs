@@ -162,8 +162,7 @@ async fn headline(ctx: &Context, msg: &Message) -> CommandResult {
                         ))
                     })
                 })
-                .await
-                .unwrap();
+                .await?;
         }
         Err(s) => {
             msg.channel_id
