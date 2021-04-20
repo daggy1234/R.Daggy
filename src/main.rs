@@ -114,7 +114,7 @@ impl EventHandler for Handler {
                 .unwrap();
             let role = cached_guild.role_by_name("Unverified").unwrap();
             mem.add_role(&ctx.http, role).await.unwrap();
-            let msg = MessageBuilder::new().push("Welcome").mention(&mem.user).push_bold("to Daggy Tech").push("A Server that houses projects like Dagpi,Dagbot,R.Daggy, Polraorid and More!\nTo Verify Head on over to").channel(ch).push("And read the rules to verify!\nHave a Great Time!").build();
+            let msg = MessageBuilder::new().push("Welcome").mention(&mem.user).push_bold(" to Daggy Tech!").push(" A Server that houses projects like Dagpi,Dagbot,R.Daggy, Polraorid and More.\nTo Verify Head on over to").channel(ch).push(" , read the rules and say `daggy verify` to verify!\nHave a Great Time!").build();
             channel.say(&ctx.http, msg).await.unwrap();
 
             mem.user
