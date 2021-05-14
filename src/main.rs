@@ -496,7 +496,7 @@ async fn main() {
     // This will load the environment variables located at `./.env`, relative to
     // the CWD. See `./.env.example` for an example on how to structure this.
 
-    dotenv::dotenv().expect("Failed to load .env file");
+    // dotenv::dotenv().expect("Failed to load .env file");
 
     // Initialize the logger to use environment variables.
     //
