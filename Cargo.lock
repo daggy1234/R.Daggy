@@ -261,9 +261,9 @@ dependencies = [
 
 [[package]]
 name = "command_attr"
-version = "0.3.4"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3479c246caa6e2064839ed6bb165fae9a8894bcc79d893090a091b49529b475"
+checksum = "fd0432ed2b23b75b490f30cb28ec8261d49e419c39bb53e974bd1731e07cc9d0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "dagpirs"
-version = "0.1.3"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2355d4ac507adc1b64622eb8e7fcfc9b1761876881eccf5bc1ca167773c83bd1"
+checksum = "da00bfb8aa32911b96f93a9dba017b03ff9f55fdab84136cefccce602b77b44d"
 dependencies = [
  "bytes 1.0.1",
  "reqwest",
@@ -1280,6 +1280,7 @@ dependencies = [
  "reqwest",
  "sentry",
  "serde",
+ "serde_json",
  "serenity",
  "serenity_utils",
  "time 0.2.26",
@@ -1676,9 +1677,9 @@ dependencies = [
 
 [[package]]
 name = "serenity"
-version = "0.10.4"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f86e9dc74c89931fe12f3af64ae484268c0a4864a90fb2b7d2e867a301f173c4"
+checksum = "e7775b6c4a554e495372cfa5d0e70349c84c62415666cf80c1ea79bc447c78d9"
 dependencies = [
  "async-trait",
  "async-tungstenite",

@@ -245,7 +245,7 @@ impl EventHandler for Handler {
         if data.name == "echo".to_string() {
             interaction
                 .create_interaction_response(&ctx.http, |f| {
-                    f.kind(InteractionResponseType::ChannelMessage);
+                    f.kind(InteractionResponseType::ChannelMessageWithSource);
                     f.interaction_response_data(|f| {
                         f.content(format!(
                             "```bash\necho {}\n```",
@@ -261,7 +261,7 @@ impl EventHandler for Handler {
                 if data.options[0].name == "status".to_string() {
                     interaction
                         .create_interaction_response(&ctx.http, |f| {
-                            f.kind(InteractionResponseType::ChannelMessage);
+                            f.kind(InteractionResponseType::ChannelMessageWithSource);
                             f.interaction_response_data(|f| f.content("Pinging...."));
                             f
                         })
@@ -285,18 +285,14 @@ impl EventHandler for Handler {
                         }
                     };
                     interaction
-                        .edit_original_interaction_response(
-                            &ctx.http,
-                            696397280433012776_u64,
-                            |f| f.content(o),
-                        )
+                        .edit_original_interaction_response(&ctx.http, |f| f.content(o))
                         .await
                         .unwrap();
                 } else {
                     if data.options[0].name == "info".to_string() {
                         interaction
                     .create_interaction_response(&ctx.http, |f| {
-                        f.kind(InteractionResponseType::ChannelMessage);
+                        f.kind(InteractionResponseType::ChannelMessageWithSource);
                         f.interaction_response_data(|f| {
                             f.content("```yaml\nDagpi Url: https://dagpi.xyz\nApi Url: https://api.dagpi.xyz\nDocs: https://dagpi.docs.apiary.io\nEmail: contact@dagpi.xyz\n```")
                         });
@@ -500,7 +496,7 @@ async fn main() {
     // This will load the environment variables located at `./.env`, relative to
     // the CWD. See `./.env.example` for an example on how to structure this.
 
-    // dotenv::dotenv().expect("Failed to load .env file");
+    dotenv::dotenv().expect("Failed to load .env file");
 
     // Initialize the logger to use environment variables.
     //
@@ -552,6 +548,7 @@ async fn main() {
         .group(&DAGPI_GROUP);
 
     let mut client = Client::builder(&token)
+        .application_id(696397280433012776_u64)
         .framework(framework)
         .event_handler(Handler)
         .raw_event_handler(RawHandler)

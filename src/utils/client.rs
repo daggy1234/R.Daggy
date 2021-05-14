@@ -48,11 +48,18 @@ impl Client {
         }
     }
 
-    pub async fn delete(&self, url: &str, auth: &str) -> Result<reqwest::Response, u16> {
+    pub async fn post_body(
+        &self,
+        url: &str,
+        auth: &str,
+        body: String,
+    ) -> Result<reqwest::Response, u16> {
         let res = self
             .req
-            .delete(url)
+            .post(url)
+            .body(body)
             .header("Authorization", auth)
+            .header("Content-Type", "application/json")
             .send()
             .await
             .unwrap();
@@ -62,4 +69,19 @@ impl Client {
             _ => Err(stat),
         }
     }
+
+    // pub async fn delete(&self, url: &str, auth: &str) -> Result<reqwest::Response, u16> {
+    //     let res = self
+    //         .req
+    //         .delete(url)
+    //         .header("Authorization", auth)
+    //         .send()
+    //         .await
+    //         .unwrap();
+    //     let stat = res.status().as_u16();
+    //     match res.status() {
+    //         StatusCode::OK => Ok(res),
+    //         _ => Err(stat),
+    //     }
+    // }
 }

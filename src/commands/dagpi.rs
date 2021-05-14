@@ -1,6 +1,7 @@
 use crate::utils::client;
 use dagpirs;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
@@ -251,7 +252,7 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     let tok = std::env::var("DAGPI_ADMIN").expect("No token");
     let resp = cliet
         .post(
-            &format!("https://central.dagpi.xyz/addtoken/{}/", member.as_u64()),
+            &format!("https://central.dagpi.xyz/tokens/{}", member.as_u64()),
             &tok,
         )
         .await;
@@ -310,6 +311,7 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
 }
 
 #[command]
+#[num_args(2)]
 #[required_permissions("ADMINISTRATOR")]
 async fn reject(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.read().await;
@@ -318,11 +320,15 @@ async fn reject(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let cliet = data.get::<client::ClientKey>().expect("No Client");
     let now = Instant::now();
     let tok = std::env::var("DAGPI_ADMIN").expect("No token");
+    let reason = args.single_quoted::<String>().unwrap();
+    let json = serde_json::json!({
+        "uu": member,
+        "reason": reason
+    })
+    .to_string();
+    println!("{}", json);
     let resp = cliet
-        .delete(
-            &format!("https://central.dagpi.xyz/deleteapp/{}/", member),
-            &tok,
-        )
+        .post_body("https://central.dagpi.xyz/app/reject", &tok, json)
         .await;
     let new_now = Instant::now();
     let diff = new_now.duration_since(now);
