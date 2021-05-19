@@ -48,6 +48,21 @@ impl Client {
         }
     }
 
+    pub async fn patch(&self, url: &str, auth: &str) -> Result<reqwest::Response, u16> {
+        let res = self
+            .req
+            .patch(url)
+            .header("Authorization", auth)
+            .send()
+            .await
+            .unwrap();
+        let stat = res.status().as_u16();
+        match res.status() {
+            StatusCode::OK => Ok(res),
+            _ => Err(stat),
+        }
+    }
+
     pub async fn post_body(
         &self,
         url: &str,

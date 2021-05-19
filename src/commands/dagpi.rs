@@ -241,6 +241,7 @@ async fn pride(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 }
 
 #[command]
+#[num_args(2)]
 #[required_permissions("ADMINISTRATOR")]
 async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let data = ctx.data.read().await;
@@ -260,7 +261,6 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
     let diff = new_now.duration_since(now);
     match resp {
         Ok(_r) => {
-            success = true;
             &msg.channel_id
                 .say(
                     &ctx,
@@ -268,6 +268,36 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
                 )
                 .await
                 .unwrap();
+            let app_id = args.single::<String>().unwrap();
+            println!("Test, {}", app_id);
+            let resp_b = cliet
+                .patch(&format!("https://central.dagpi.xyz/app/{}", app_id), &tok)
+                .await;
+            match resp_b {
+                Ok(_r_b) => {
+                    &msg.channel_id
+                        .say(
+                            &ctx,
+                            format!("Selected App was succesfully Patched.\nTook {:?}", diff),
+                        )
+                        .await
+                        .unwrap();
+
+                    success = true;
+                }
+                Err(e_c) => {
+                    &msg.channel_id
+                        .say(
+                            &ctx,
+                            format!(
+                                "Errror Occured With Patching. Dagpi Returned a {}.\nTook {:?}",
+                                e_c, diff
+                            ),
+                        )
+                        .await
+                        .unwrap();
+                }
+            }
         }
         Err(e) => {
             &msg.channel_id
@@ -287,8 +317,7 @@ async fn approve(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
             .to_guild_cached(&ctx.cache)
             .await
             .unwrap();
-        let u = args.single::<id::UserId>().unwrap();
-        if let Some(member) = cached_guild.members.get(&u) {
+        if let Some(member) = cached_guild.members.get(&member) {
             match member
                 .user
                 .direct_message(&ctx, |f| {
