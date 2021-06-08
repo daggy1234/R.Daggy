@@ -2,6 +2,7 @@ mod commands;
 mod misc;
 use std::time::Instant;
 mod utils;
+use unidecode::unidecode;
 
 use dagpirs;
 use sentry;
@@ -128,6 +129,12 @@ impl EventHandler for Handler {
                 })
                 .await
                 .expect("No Dm");
+            let decoded = unidecode(&mem.user.name);
+            if decoded != mem.user.name {
+                mem.edit(&ctx.http, |f| f.nickname(decoded))
+                    .await
+                    .expect("Unable to edit");
+            }
         }
     }
 
