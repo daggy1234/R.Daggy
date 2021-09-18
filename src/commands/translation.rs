@@ -1,13 +1,10 @@
 use bottomify;
-use futures::AsyncReadExt;
 use serenity::framework::standard::{macros::command, Args, CommandResult};
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use serenity::utils::Colour;
 
-use uwuifier::uwu_ify_sse;
-
-const LEN: usize = 1 << 16;
+use uwuifier::uwuify_str_sse;
 
 #[command]
 #[usage = "<command> <text>"]
@@ -72,22 +69,12 @@ async fn bottom(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[usage = "<text>"]
 #[description("Uwuify your text")]
 async fn uwu(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let mut bytes = vec![0u8; LEN];
     let input = args.rest().to_string();
-    input.as_bytes().read(&mut bytes).await.unwrap();
-    let len = bytes.len();
-    let mut temp_bytes1 = vec![0u8; LEN * 16];
-    let mut temp_bytes2 = vec![0u8; LEN * 16];
-    let mut uwu_text = String::new();
-    uwu_ify_sse(&bytes, len, &mut temp_bytes1, &mut temp_bytes2)
-        .read_to_string(&mut uwu_text)
-        .await
-        .unwrap();
-    let ftext = uwu_text.trim_matches(char::from(0));
+    let out = uwuify_str_sse(&input);
     msg.channel_id
         .send_message(&ctx.http, |f| {
             f.embed(|e| {
-                e.description(format!("**Title**\n{}\n**Uwu**\n{}", input, ftext));
+                e.description(format!("**Title**\n{}\n**Uwu**\n{}", input, out));
                 e.title("UWUified");
                 e.color(Colour::FABLED_PINK);
                 e

@@ -78,7 +78,7 @@ async fn ide(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                                         
                                         let current = OffsetDateTime::now_utc();
                                         let start_t = parse_serenity(sub);
-                                        let start = OffsetDateTime::from_unix_timestamp(start_t);
+                                        let start = OffsetDateTime::from_unix_timestamp(start_t).unwrap();
                                         let diff = current - start;
                                         timeparser::humanise_time(diff)
                     
@@ -185,7 +185,7 @@ async fn spotify(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
                                         
                                         let current = OffsetDateTime::now_utc();
                                         let start_t = parse_serenity(sub);
-                                        let start = OffsetDateTime::from_unix_timestamp(start_t);
+                                        let start = OffsetDateTime::from_unix_timestamp(start_t).unwrap();
                                         let diff = current - start;
                                         dur = diff.whole_seconds();
                                         ss = timeparser::min_sec_parse(diff);
@@ -210,8 +210,8 @@ async fn spotify(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult 
                             embed.thumbnail(format!("https://i.scdn.co/image/{}",img.replace("spotify:", "")));
                             let secs = match &f.timestamps {
                                 Some(s) => {
-                                    let sta = OffsetDateTime::from_unix_timestamp(parse_serenity(s.start.unwrap()));
-                                    let end = OffsetDateTime::from_unix_timestamp(parse_serenity(s.end.unwrap()));
+                                    let sta = OffsetDateTime::from_unix_timestamp(parse_serenity(s.start.unwrap())).unwrap();
+                                    let end = OffsetDateTime::from_unix_timestamp(parse_serenity(s.end.unwrap())).unwrap();
                                     let secs = (end-sta).whole_seconds();
                                     se = timeparser::min_sec_parse(end-sta);
                                     secs

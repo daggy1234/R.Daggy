@@ -19,9 +19,20 @@ use serenity::{
     },
     http::Http,
     model::{
-        channel::Message, channel::Reaction, channel::ReactionType, event::ResumedEvent,
-        gateway::Ready, guild::Member, id::ChannelId, id::GuildId, id::UserId,
-        interactions::Interaction, interactions::InteractionResponseType, prelude::User,
+        channel::Message,
+        channel::Reaction,
+        channel::ReactionType,
+        event::ResumedEvent,
+        gateway::Ready,
+        guild::Member,
+        id::ChannelId,
+        id::GuildId,
+        id::UserId,
+        interactions::{application_command::ApplicationCommand, Interaction},
+        interactions::{
+            application_command::ApplicationCommandOptionType, InteractionResponseType,
+        },
+        prelude::User,
     },
     prelude::*,
     utils::Colour,
@@ -66,10 +77,44 @@ impl RawEventHandler for RawHandler {
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        let commands = ApplicationCommand::set_global_application_commands(&ctx.http, |f| {
+            f.create_application_command(|cmd| {
+                cmd.name("echo")
+                    .description("echo a message")
+                    .create_option(|opt| {
+                        opt.name("message")
+                            .description("The message to echo")
+                            .kind(ApplicationCommandOptionType::String)
+                            .required(true)
+                    })
+            })
+            .create_application_command(|cmd| {
+                cmd.name("premium").description("understand dagpi premium")
+            })
+            .create_application_command(|cmd| {
+                cmd.name("dagpi")
+                    .description("understand dagpi")
+                    .create_option(|opt| {
+                        opt.name("info")
+                            .description("information about dagpi")
+                            .kind(ApplicationCommandOptionType::SubCommand)
+                    })
+                    .create_option(|opt| {
+                        opt.name("status")
+                            .description("view dagpi status")
+                            .kind(ApplicationCommandOptionType::SubCommand)
+                    })
+            })
+        })
+        .await;
         println!("Connected as {}", ready.user.name);
         println!("Using API v{}", ready.version);
         println!("Id: {}", ready.session_id);
+        println!(
+            "I now have the following global slash commands: {:#?}",
+            commands
+        );
     }
 
     async fn resume(&self, _: Context, _: ResumedEvent) {
@@ -245,35 +290,29 @@ impl EventHandler for Handler {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        let data = match &interaction.data {
-            Some(e) => e,
-            None => panic!("Fuck"),
-        };
-        if data.name == "echo".to_string() {
-            interaction
-                .create_interaction_response(&ctx.http, |f| {
+        if let Interaction::ApplicationCommand(cmd) = interaction {
+            if cmd.data.name == "echo".to_string() {
+                cmd.create_interaction_response(&ctx.http, |f| {
                     f.kind(InteractionResponseType::ChannelMessageWithSource);
                     f.interaction_response_data(|f| {
                         f.content(format!(
                             "```bash\necho {}\n```",
-                            data.options[0].value.as_ref().expect("grr")
+                            cmd.data.options[0].value.as_ref().expect("grr")
                         ))
                     });
                     f
                 })
                 .await
                 .unwrap();
-        } else {
-            if data.name == "dagpi".to_string() {
-                if data.options[0].name == "status".to_string() {
-                    interaction
-                        .create_interaction_response(&ctx.http, |f| {
-                            f.kind(InteractionResponseType::ChannelMessageWithSource);
-                            f.interaction_response_data(|f| f.content("Pinging...."));
-                            f
-                        })
-                        .await
-                        .unwrap();
+            } else if cmd.data.name == "dagpi".to_string() {
+                if cmd.data.options[0].name == "status".to_string() {
+                    cmd.create_interaction_response(&ctx.http, |f| {
+                        f.kind(InteractionResponseType::ChannelMessageWithSource);
+                        f.interaction_response_data(|f| f.content("Pinging...."));
+                        f
+                    })
+                    .await
+                    .unwrap();
                     let data = ctx.data.read().await;
                     let cliet = data.get::<client::ClientKey>().expect("No Client");
                     let now = Instant::now();
@@ -291,17 +330,16 @@ impl EventHandler for Handler {
                             )
                         }
                     };
-                    interaction
-                        .edit_original_interaction_response(&ctx.http, |f| f.content(o))
+                    cmd.edit_original_interaction_response(&ctx.http, |f| f.content(o))
                         .await
                         .unwrap();
                 } else {
-                    if data.options[0].name == "info".to_string() {
-                        interaction
+                    if cmd.data.options[0].name == "info".to_string() {
+                        cmd
                     .create_interaction_response(&ctx.http, |f| {
                         f.kind(InteractionResponseType::ChannelMessageWithSource);
                         f.interaction_response_data(|f| {
-                            f.content("```yaml\nDagpi Url: https://dagpi.xyz\nApi Url: https://api.dagpi.xyz\nDocs: https://dagpi.docs.apiary.io\nEmail: contact@dagpi.xyz\n```")
+                            f.content("```yaml\nDagpi Url: https://dagpi.xyz\nApi Url: https://api.dagpi.xyz\nDocs: https://dagpi.docs.apiary.io\nEmail: contact@dagpi.xyz\nPremium: https://dagpi.xyz/premium\nDonate: https://dagpi.xyz/donate```")
                         });
                         f
                     })
@@ -309,6 +347,26 @@ impl EventHandler for Handler {
                     .unwrap();
                     }
                 }
+            } else if cmd.data.name == "premium".to_string() {
+                cmd
+                .create_interaction_response(&ctx.http, |f| {
+                    f.interaction_response_data(|f| {
+                        f.content("Thank you for your intrest with Dagpi Premium! read more at\nhttps://dagpi.xyz/premium")
+                    });
+                    f
+                })
+                .await
+                .unwrap();
+            } else if cmd.data.name == "donate".to_string() {
+                cmd
+                .create_interaction_response(&ctx.http, |f| {
+                    f.interaction_response_data(|f| {
+                        f.content("Donations really help support dagpi and my other open source projects. Donate at: https://dagpi.xyz/donate")
+                    });
+                    f
+                })
+                .await
+                .unwrap();
             }
         }
     }
